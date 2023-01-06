@@ -35,9 +35,8 @@ export default function Game() {
     normalizeVector({ x: Math.random() * 100, y: Math.random() * 100 })
   );
 
-  const playerPosition = useSharedValue({ x: width / 4, y: height - 100 });
-
   const { height, width } = useWindowDimensions();
+  const playerPosition = useSharedValue({ x: width / 4, y: height - 100 });
 
   const player = { x: width / 4, y: height - 100, w: width / 2, h: 32 };
 
@@ -66,7 +65,7 @@ export default function Game() {
       };
     }
 
-    // island detection
+    // island hit detection
     if (
       nextPosition.x < island.x + island.w &&
       nextPosition.x + BALL_WIDTH > island.x &&
@@ -124,7 +123,10 @@ export default function Game() {
   const gestureHandler = useAnimatedGestureHandler({
     onStart: () => {},
     onActive: (e) => {
-      playerPosition.value = { ...playerPosition.value, x: e.absoluteX };
+      playerPosition.value = {
+        ...playerPosition.value,
+        x: e.absoluteX - player.w / 2,
+      };
     },
     onEnd: () => {},
   });
