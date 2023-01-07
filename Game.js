@@ -1,5 +1,11 @@
-import { useEffect } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  Button,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import Animated, {
   Easing,
   useAnimatedGestureHandler,
@@ -35,23 +41,32 @@ export default function Game() {
     normalizeVector({ x: Math.random() * 100, y: Math.random() * 100 })
   );
 
+  const [score, setScore] = useState(0);
+  const [gameOver, setGameOver] = useState(true);
+
   const { height, width } = useWindowDimensions();
   const playerPosition = useSharedValue({ x: width / 4, y: height - 100 });
 
   const player = { x: width / 4, y: height - 100, w: width / 2, h: 32 };
 
   useEffect(() => {
-    const interval = setInterval(update, DELTA);
+    const interval = setInterval(() => {
+      if (!gameOver) update();
+    }, DELTA);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [gameOver]);
 
   const update = () => {
     let nextPosition = getNextPosition(direction.value);
     let newDirection = direction.value;
 
     // wall detection
-    if (nextPosition.y < 0 || nextPosition.y > height - BALL_WIDTH) {
+    if (nextPosition.y > height - BALL_WIDTH) {
+      setGameOver(true);
+    }
+
+    if (nextPosition.y < 0) {
       newDirection = {
         x: direction.value.x,
         y: -direction.value.y,
@@ -75,6 +90,31 @@ export default function Game() {
       if (
         targetPositionX.value < island.x ||
         targetPositionX.value > island.x + island.w
+      ) {
+        newDirection = {
+          x: -direction.value.x,
+          y: direction.value.y,
+        };
+      } else {
+        newDirection = {
+          x: direction.value.x,
+          y: -direction.value.y,
+        };
+      }
+
+      setScore((score) => score + 1);
+    }
+
+    // player hit detection
+    if (
+      nextPosition.x < playerPosition.value.x + player.w &&
+      nextPosition.x + BALL_WIDTH > playerPosition.value.x &&
+      nextPosition.y < player.y + player.h &&
+      nextPosition.y + BALL_WIDTH > player.y
+    ) {
+      if (
+        targetPositionX.value < playerPosition.value.x ||
+        targetPositionX.value > playerPosition.value.x + player.w
       ) {
         newDirection = {
           x: -direction.value.x,
@@ -131,9 +171,25 @@ export default function Game() {
     onEnd: () => {},
   });
 
+  const restartGame = () => {
+    targetPositionX.value = width / 2;
+    targetPositionY.value = height / 2;
+    setScore(0);
+    setGameOver(false);
+  };
+
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.ball, ballAnimatedStyles]} />
+      <Text style={styles.score}>{score}</Text>
+
+      {gameOver && (
+        <View style={styles.gameOverContainer}>
+          <Text style={styles.gameOver}>Game Over</Text>
+          <Button title="restart" onPress={restartGame} />
+        </View>
+      )}
+
+      {!gameOver && <Animated.View style={[styles.ball, ballAnimatedStyles]} />}
 
       {/* island */}
       <View
@@ -168,7 +224,7 @@ export default function Game() {
           style={{
             width: '100%',
             height: 50,
-            backgroundColor: 'red',
+            // backgroundColor: 'red',
             position: 'absolute',
             bottom: 95,
             opacity: 0.4,
@@ -183,7 +239,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    backgroundColor: 'pink',
+    backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -193,5 +249,21 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 25,
     position: 'absolute',
+  },
+  score: {
+    fontSize: 100,
+    fontWeight: 'bold',
+    color: 'lightgray',
+    position: 'absolute',
+    top: 250,
+  },
+  gameOverContainer: {
+    position: 'absolute',
+    top: 420,
+  },
+  gameOver: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: 'red',
   },
 });
